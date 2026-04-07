@@ -1,0 +1,27 @@
+# 九一八事变语料分析项目依赖包
+# 安装命令: pip install -r requirements.txt
+
+# 文档处理
+python-docx>=0.8.11
+
+# 中文分词
+jieba>=0.42.1
+
+# 俄语形态学分析
+pymorphy3>=1.2.0
+pymorphy3-dicts-ru>=2.4.417150.4580142
+
+# 自然语言处理
+nltk>=3.8.1
+
+# 数据处理与分析
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# 可视化
+matplotlib>=3.7.0
+wordcloud>=1.9.2
+
+# 可选：如果选择使用spacy方案（更强大但更重）
+# spacy>=3.5.0
+# 安装后需运行: python -m spacy download ru_core_news_sm
