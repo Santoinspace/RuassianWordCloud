@@ -55,22 +55,28 @@ RU_TO_ZH_TRANS = {
     # 在此添加更多翻译映射，避免每次都调用API
 }
 
-# 中文停用词表（基础版）
+# 中文停用词表（深度扩充版 - 针对抗日战争历史研究）
 CHN_STOPWORDS = {
+    # 基础停用词
     '的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个',
     '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', '好',
     '自己', '这', '那', '里', '为', '与', '及', '等', '之', '于', '对', '从', '以',
     '但', '而', '或', '因', '所', '由', '其', '被', '将', '把', '向', '给', '让',
-    '年', '月', '日', '时', '分', '点', '号', '第', '个', '些', '此', '该', '各', '塔斯社',
+    '年', '月', '日', '时', '分', '点', '号', '第', '个', '些', '此', '该', '各',
     # 代词和量词
     '一些', '这种', '那种', '这样', '那样', '什么', '怎么', '如何', '哪些', '多少',
-    # 领域泛义词（新闻报道类低价值词）
+    '我们', '我们自己', '他们', '这些', '任何', '一切', '一项', '一名',
+    # 情态动词和助动词
+    '必须', '应该', '不能', '将会',
+    # 新闻报道类泛义词（低价值词）
     '发生', '问题', '进行', '要求', '方面', '行动', '认为', '局势', '继续', '准备',
     '情况', '表示', '指出', '提出', '作出', '采取', '开始', '结束', '出现', '成为',
-    # 指定继续扩充的无意义词
-    '记者', '报道', '消息', '关于',
-    # ???????????????
-    '同时', '正在', '如果', '立即', '任何', '以及', '不断', '之间', '写道', '通讯社', '声明', '展开',
+    '为了', '作为', '目前', '全面', '向前', '发动', '工作', '建立', '决定', '同意',
+    '大会', '会议',
+    # 新闻机构和报道用词
+    '塔斯社', '记者', '报道', '消息', '关于',
+    # 其他低价值词
+    '同时', '正在', '如果', '立即', '以及', '不断', '之间', '写道', '通讯社', '声明', '展开',
 }
 
 # 俄语停用词（需要下载nltk数据）
@@ -81,18 +87,24 @@ except LookupError:
 
 RUS_STOPWORDS = set(stopwords.words('russian'))
 
-# 俄语额外停用词（补充常见功能词）
+# 俄语额外停用词（深度扩充 - 补充词形还原后的基础词条 lemma 形式）
 RUS_STOPWORDS.update({
-    'это', 'быть', 'весь', 'свой', 'мочь', 'который', 'такой', 'наш', 'ваш',
-    'их', 'его', 'её', 'этот', 'тот', 'один', 'два', 'три', 'год', 'день',
-    # ??????????????
-    'корреспондент',
-    'сообщение', 'сообщения',
-    'сообщать', 'сообщить', 'сообщил', 'сообщила', 'сообщили', 'сообщается', 'сообщают',
-    # ???????????/??/????
-    'сейчас', 'во время', 'если', 'немедленно', 'любой', 'любая', 'любое',
-    'также', 'постоянно', 'между', 'написал', 'написала', 'написали',
-    'агентство', 'агентства', 'заявил', 'заявила', 'заявили', 'заявление', 'развернул', 'развернула', 'развернули',
+    # 代词（lemma形式）
+    'это', 'этот', 'тот', 'свой', 'который', 'весь', 'такой', 'наш', 'ваш',
+    'их', 'его', 'её', 'один', 'два', 'три',
+    # 系动词和情态动词（lemma形式）
+    'быть', 'являться', 'мочь',
+    # 介词和连词
+    'против', 'также',
+    # 时间词
+    'время', 'год', 'день',
+    # 新闻报道用词（lemma形式）
+    'корреспондент', 'сообщение', 'сообщения', 'сообщать', 'сообщить', 'сообщил',
+    'сообщила', 'сообщили', 'сообщается', 'сообщают',
+    # 其他低价值词
+    'сейчас', 'если', 'немедленно', 'любой', 'любая', 'любое', 'постоянно', 'между',
+    'написал', 'написала', 'написали', 'агентство', 'агентства', 'заявил', 'заявила',
+    'заявили', 'заявление', 'развернул', 'развернула', 'развернули',
 })
 
 # 保留的俄语词性（只保留实词）
@@ -106,18 +118,11 @@ FONT_PATH = 'simhei.ttf'  # 黑体，Windows系统自带
 # Linux: /usr/share/fonts/truetype/wqy/wqy-microhei.ttc
 
 # 输出目录
-OUTPUT_DIR = 'outputs_1\\baituan_analysis'
+OUTPUT_DIR = 'outputs_3'
 
 # ============================================================================
 # 工具函数
 # ============================================================================
-
-def ensure_output_dir():
-    """确保输出目录存在"""
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-        print(f"✓ 创建输出目录: {OUTPUT_DIR}")
-
 
 def is_chinese(text: str) -> bool:
     """判断文本是否主要为中文"""
@@ -411,7 +416,7 @@ def calculate_normalized_frequencies(
 # 可视化
 # ============================================================================
 
-def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: str, font_path: str = None):
+def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: str, output_dir: str = None, font_path: str = None):
     """
     生成词云图
 
@@ -419,6 +424,7 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
         words: [(词汇, 词性), ...] 列表
         title: 图表标题
         output_file: 输出文件名
+        output_dir: 输出目录，默认使用全局 OUTPUT_DIR
         font_path: 字体路径，默认使用全局 FONT_PATH
     """
     print(f"\n生成词云图: {title}")
@@ -446,14 +452,15 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
     plt.tight_layout(pad=0)
 
     # 保存
-    output_path = os.path.join(OUTPUT_DIR, output_file)
+    save_dir = output_dir if output_dir else OUTPUT_DIR
+    output_path = os.path.join(save_dir, output_file)
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
 
     print(f"✓ 词云图已保存: {output_path}")
 
 
-def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, use_times_for_xticks: bool = False):
+def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_dir: str = None, use_times_for_xticks: bool = False):
     """
     生成高频词柱状图
 
@@ -461,6 +468,7 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, use_times
         df: 包含词汇和标准化频次的DataFrame
         title: 图表标题
         output_file: 输出文件名
+        output_dir: 输出目录，默认使用全局 OUTPUT_DIR
         use_times_for_xticks: 是否对X轴刻度使用Times New Roman字体（用于俄文）
     """
     print(f"\n生成柱状图: {title}")
@@ -521,7 +529,8 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, use_times
     plt.tight_layout()
 
     # 保存
-    output_path = os.path.join(OUTPUT_DIR, output_file)
+    save_dir = output_dir if output_dir else OUTPUT_DIR
+    output_path = os.path.join(save_dir, output_file)
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
 
@@ -532,167 +541,273 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, use_times
 # 主流程
 # ============================================================================
 
+# ============================================================================
+# 工具函数（修改部分）
+# ============================================================================
+
+def ensure_output_dir(output_dir: str) -> None:
+    """确保输出目录存在，不存在则创建（支持多级路径）"""
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"  [目录已创建] {output_dir}")
+
+
+def get_doc_output_dir(base_name: str) -> str:
+    """
+    根据文档名称，返回其专属输出子目录路径。
+    例如：'七七事变资料' -> 'outputs/七七事变资料'
+    """
+    return os.path.join(OUTPUT_DIR, base_name)
+
+
+# ============================================================================
+# 主流程（重构部分）
+# ============================================================================
+
 def main():
-    """主函数"""
-    print("\n" + "="*60)
-    print("抗日事变历史语料NLP分析系统")
-    print("="*60)
+    """批量处理 Data 文件夹下所有 docx 文件的主流程"""
+    print("=" * 60)
+    print("  历史语料 NLP 批量分析脚本")
+    print("=" * 60)
 
-    # 确保输出目录存在
-    ensure_output_dir()
+    # ── 第一点：扫描 Data 文件夹，收集所有 docx 文件 ──────────────────────
+    data_dir = 'Data'
+    if not os.path.isdir(data_dir):
+        print(f"[错误] 未找到数据目录：{data_dir}")
+        return
 
-    # 1. 读取文档
-    docx_path = 'Data/百团大战资料.docx'
-    chinese_texts, russian_texts, events = read_docx(docx_path)
+    docx_files = sorted([
+        os.path.join(data_dir, f)
+        for f in os.listdir(data_dir)
+        if f.lower().endswith('.docx')
+    ])
 
-    # 2. 处理中文文本
-    chinese_words = process_chinese_text(chinese_texts)
-    chinese_freq_df = calculate_frequencies(chinese_words, top_n=20)
+    if not docx_files:
+        print(f"[警告] {data_dir} 目录下未找到任何 .docx 文件，程序退出。")
+        return
 
-    # 3. 处理俄语文本
-    russian_words = process_russian_text(russian_texts)
-    russian_freq_df = calculate_frequencies(russian_words, top_n=20)
+    total_files = len(docx_files)
+    print(f"\n共发现 {total_files} 个 docx 文件，开始批量处理...\n")
 
-    # 4. 计算标准化频次
+    # 用于最终汇总报告
+    success_list = []
+    failed_list  = []
+
+    # ── 遍历每个文档 ────────────────────────────────────────────────────────
+    for idx, docx_path in enumerate(docx_files, start=1):
+        base_name  = os.path.splitext(os.path.basename(docx_path))[0]
+
+        # ── 第二点：为每个文档创建同名独立子目录 ──────────────────────────
+        output_dir = get_doc_output_dir(base_name)
+
+        print(f"\n{'─'*60}")
+        print(f"[{idx}/{total_files}] 正在处理：{base_name}.docx")
+        print(f"            输出目录：{output_dir}")
+        print(f"{'─'*60}")
+
+        # 创建该文档专属的输出目录
+        ensure_output_dir(output_dir)
+
+        try:
+            # 1. 读取文档
+            chinese_texts, russian_texts, events = read_docx(docx_path)
+
+            # 2. 中文词频统计
+            chinese_words    = process_chinese_text(chinese_texts)
+            chinese_freq_df  = calculate_frequencies(chinese_words, top_n=20)
+
+            # 3. 俄文词频统计
+            russian_words    = process_russian_text(russian_texts)
+            russian_freq_df  = calculate_frequencies(russian_words, top_n=20)
+
+            # 4. 标准化频次
+            print(f"\n{'='*60}")
+            print("计算标准化频次...")
+            print(f"{'='*60}")
+
+            chinese_normalized = calculate_normalized_frequencies(
+                events, 'chinese', chinese_freq_df['词汇'].tolist()
+            )
+            russian_normalized = calculate_normalized_frequencies(
+                events, 'russian', russian_freq_df['词汇'].tolist()
+            )
+
+            chinese_freq_df['标准化频次'] = chinese_freq_df['词汇'].map(chinese_normalized)
+            russian_freq_df['标准化频次'] = russian_freq_df['词汇'].map(russian_normalized)
+
+            chinese_freq_df.insert(1, '语言', '中文')
+            russian_freq_df.insert(1, '语言', '俄文')
+
+            print("标准化频次计算完成")
+
+            # ── 第三点：词云、柱状图、Excel 均写入该文档的独立子目录 ────────
+
+            # 5. 生成词云（→ output_dir/wordcloud_chinese.png 等）
+            print(f"\n{'='*60}")
+            print("生成词云图...")
+            print(f"{'='*60}")
+
+            RUS_FONT = 'C:/Windows/Fonts/times.ttf'
+
+            generate_wordcloud(
+                chinese_words, '中文词汇词云图',
+                'wordcloud_chinese.png', output_dir=output_dir
+            )
+            generate_wordcloud(
+                russian_words, '俄文词汇词云图',
+                'wordcloud_russian.png', output_dir=output_dir,
+                font_path=RUS_FONT
+            )
+
+            # 6. 生成柱状图（→ output_dir/barchart_chinese.png 等）
+            chinese_bar_df = chinese_freq_df.sort_values(
+                '标准化频次', ascending=False
+            ).reset_index(drop=True)
+            russian_bar_df = russian_freq_df.sort_values(
+                '标准化频次', ascending=False
+            ).reset_index(drop=True)
+
+            generate_bar_chart(
+                chinese_bar_df, '中文 Top20 标准化频次',
+                'barchart_chinese.png', output_dir=output_dir,
+                use_times_for_xticks=False
+            )
+            generate_bar_chart(
+                russian_bar_df, '俄文 Top20 标准化频次',
+                'barchart_russian.png', output_dir=output_dir,
+                use_times_for_xticks=True
+            )
+
+            # 7. 导出 Excel（→ output_dir/result.xlsx）
+            print(f"\n{'='*60}")
+            print("导出结果表格...")
+            print(f"{'='*60}")
+
+            print("\n翻译俄文词汇...")
+            translator = GoogleTranslator(source='ru', target='zh-CN')
+
+            def translate_words_robust(words):
+                """优先使用本地词典，不足时调用 API"""
+                results         = []
+                api_translations = []
+                for w in words:
+                    if w in RU_TO_ZH_TRANS:
+                        results.append(RU_TO_ZH_TRANS[w])
+                    else:
+                        try:
+                            trans = translator.translate(w)
+                            results.append(trans)
+                            api_translations.append((w, trans))
+                        except Exception as e:
+                            print(f"  翻译失败：{w} - {e}")
+                            results.append('')
+
+                if api_translations:
+                    print("\n" + "=" * 60)
+                    print("以下词汇通过 API 翻译，建议补充到 RU_TO_ZH_TRANS 字典：")
+                    print("=" * 60)
+                    for ru, zh in api_translations:
+                        print(f"    '{ru}': '{zh}',")
+                    print("=" * 60 + "\n")
+
+                return results
+
+            russian_freq_df['中文翻译'] = translate_words_robust(
+                russian_freq_df['词汇'].tolist()
+            )
+            chinese_freq_df['中文翻译'] = chinese_freq_df['词汇']
+
+            def build_export_df(df, lang):
+                return pd.DataFrame({
+                    '语言':     lang,
+                    '词汇':     df['词汇'].values,
+                    '词性':     df['词性'].values if lang == '中文' else '',
+                    '中文翻译': df['中文翻译'].values,
+                    '频次':     df['绝对频次'].values,
+                    '排名':     df['排名'].values,
+                    '标准化频次': df['标准化频次'].values,
+                    '备注':     '',
+                })
+
+            combined_df = pd.concat(
+                [build_export_df(chinese_freq_df, '中文'),
+                 build_export_df(russian_freq_df, '俄文')],
+                ignore_index=True
+            )
+
+            # ── 第三点（关键）：Excel 路径使用当前文档专属 output_dir ──────
+            excel_path = os.path.join(output_dir, 'result.xlsx')
+            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+                combined_df.to_excel(
+                    writer, sheet_name='综合词频表', index=False
+                )
+                chinese_freq_df.to_excel(
+                    writer, sheet_name='中文词频', index=False
+                )
+                russian_freq_df.to_excel(
+                    writer, sheet_name='俄文词频', index=False
+                )
+
+                events_data = [
+                    {
+                        '事件序号': i,
+                        '日期':     ev['date'] or '未知',
+                        '中文段落数': len(ev['chinese']),
+                        '俄文段落数': len(ev['russian'])
+                    }
+                    for i, ev in enumerate(events, 1)
+                ]
+                pd.DataFrame(events_data).to_excel(
+                    writer, sheet_name='事件列表', index=False
+                )
+
+            print(f"Excel 已保存：{excel_path}")
+
+            # 8. 单文件摘要
+            print(f"\n{'='*60}")
+            print(f"「{base_name}」处理完成")
+            print(f"{'='*60}")
+            print(f"\n中文 Top5 词汇")
+            for _, row in chinese_freq_df.head(5).iterrows():
+                print(f"  {row['排名']}. {row['词汇']:<10} "
+                      f"频次：{row['绝对频次']:<6} "
+                      f"中文翻译：{row['中文翻译']:>4}  "
+                      f"标准化频次：{row['标准化频次']:>6.2f}")
+
+            print(f"\n俄文 Top5 词汇")
+            for _, row in russian_freq_df.head(5).iterrows():
+                print(f"  {row['排名']}. {row['词汇']:<15} "
+                      f"频次：{row['绝对频次']:<6} "
+                      f"中文翻译：{row['中文翻译']:>4}  "
+                      f"标准化频次：{row['标准化频次']:>6.2f}")
+
+            print(f"\n所有输出文件位于：{output_dir}")
+
+            success_list.append(base_name)
+
+        except Exception as e:
+            print(f"\n[错误] 处理「{base_name}」时发生异常：{e}")
+            failed_list.append((base_name, str(e)))
+
+    # ── 第四点：全局运行报告 ───────────────────────────────────────────────
     print(f"\n{'='*60}")
-    print("计算标准化频次...")
+    print("  批量处理完毕 —— 总体运行报告")
     print(f"{'='*60}")
+    print(f"  总文件数  ：{total_files}")
+    print(f"  成功处理  ：{len(success_list)} 个")
+    print(f"  失败文件  ：{len(failed_list)} 个")
 
-    chinese_normalized = calculate_normalized_frequencies(
-        events, 'chinese', chinese_freq_df['词汇'].tolist()
-    )
-    russian_normalized = calculate_normalized_frequencies(
-        events, 'russian', russian_freq_df['词汇'].tolist()
-    )
+    if success_list:
+        print(f"\n  ✓ 成功列表：")
+        for name in success_list:
+            print(f"      {name}  →  {get_doc_output_dir(name)}")
 
-    # 添加标准化频次列
-    chinese_freq_df['标准化频次'] = chinese_freq_df['词汇'].map(chinese_normalized)
-    russian_freq_df['标准化频次'] = russian_freq_df['词汇'].map(russian_normalized)
+    if failed_list:
+        print(f"\n  ✗ 失败列表（请检查后重试）：")
+        for name, reason in failed_list:
+            print(f"      {name}：{reason}")
 
-    # 添加语言标识
-    chinese_freq_df.insert(1, '语言', '中文')
-    russian_freq_df.insert(1, '语言', '俄文')
-
-    print(f"✓ 标准化频次计算完成")
-
-    # 5. 生成词云图
-    print(f"\n{'='*60}")
-    print("生成可视化图表...")
-    print(f"{'='*60}")
-
-    # 俄语词云明确使用 Times New Roman 字体
-    RUS_FONT = 'C:/Windows/Fonts/times.ttf'
-
-    generate_wordcloud(chinese_words, '中文高频词词云图', 'wordcloud_chinese.png')
-    generate_wordcloud(russian_words, '俄文高频词词云图', 'wordcloud_russian.png', font_path=RUS_FONT)
-
-    # 6. 生成柱状图（按“标准化频次”降序排序，确保视觉上平滑递减）
-    chinese_bar_df = chinese_freq_df.sort_values('标准化频次', ascending=False).reset_index(drop=True)
-    russian_bar_df = russian_freq_df.sort_values('标准化频次', ascending=False).reset_index(drop=True)
-    generate_bar_chart(chinese_bar_df, '中文Top20高频词分布', 'barchart_chinese.png', use_times_for_xticks=False)
-    generate_bar_chart(russian_bar_df, '俄文Top20高频词分布', 'barchart_russian.png', use_times_for_xticks=True)
-
-    # 7. 导出Excel
-    print(f"\n{'='*60}")
-    print("导出统计数据...")
-    print(f"{'='*60}")
-
-    # 为俄文词汇自动翻译中文（优先使用字典，其次API）
-    print("\n正在翻译俄文词汇...")
-    translator = GoogleTranslator(source='ru', target='zh-CN')
-
-    def translate_words_robust(words):
-        """鲁棒的翻译函数：优先字典，其次API"""
-        results = []
-        api_translations = []  # 记录通过API获取的翻译
-
-        for w in words:
-            # 1. 先查字典
-            if w in RU_TO_ZH_TRANS:
-                results.append(RU_TO_ZH_TRANS[w])
-            else:
-                # 2. 字典中没有，调用API
-                try:
-                    trans = translator.translate(w)
-                    results.append(trans)
-                    api_translations.append((w, trans))
-                except Exception as e:
-                    print(f"  ⚠ 翻译失败: {w} - {e}")
-                    results.append('')
-
-        # 3. 打印API翻译结果，提醒用户添加到字典
-        if api_translations:
-            print("\n" + "="*60)
-            print("⚠ 以下翻译通过API获取，建议添加到 RU_TO_ZH_TRANS 字典：")
-            print("="*60)
-            for ru, zh in api_translations:
-                print(f"    '{ru}': '{zh}',")
-            print("="*60 + "\n")
-
-        return results
-
-    russian_freq_df['中文翻译'] = translate_words_robust(russian_freq_df['词汇'].tolist())
-    chinese_freq_df['中文翻译'] = chinese_freq_df['词汇']  # 中文词汇本身即为翻译
-
-    # 构建统一格式：语言 | 排名 | 俄文 | 中文翻译 | 频次 | 词性 | 标准化频次 | 语义分类
-    def build_export_df(df, lang):
-        return pd.DataFrame({
-            '语言':     lang,
-            '排名':     df['排名'].values,
-            '俄文':     df['词汇'].values if lang == '俄文' else '',
-            '中文翻译': df['中文翻译'].values,
-            '频次':     df['绝对频次'].values,
-            '词性':     df['词性'].values,
-            '标准化频次': df['标准化频次'].values,
-            '语义分类': '',
-        })
-
-    combined_df = pd.concat(
-        [build_export_df(chinese_freq_df, '中文'), build_export_df(russian_freq_df, '俄文')],
-        ignore_index=True
-    )
-
-    # 保存Excel
-    excel_path = os.path.join(OUTPUT_DIR, 'result.xlsx')
-    with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
-        combined_df.to_excel(writer, sheet_name='高频词统计', index=False)
-        chinese_freq_df.to_excel(writer, sheet_name='中文统计', index=False)
-        russian_freq_df.to_excel(writer, sheet_name='俄文统计', index=False)
-
-        # 保存事件划分信息
-        events_data = []
-        for i, event in enumerate(events, 1):
-            events_data.append({
-                '事件编号': i,
-                '日期': event['date'] or '未标注',
-                '中文段落数': len(event['chinese']),
-                '俄文段落数': len(event['russian'])
-            })
-        events_df = pd.DataFrame(events_data)
-        events_df.to_excel(writer, sheet_name='事件划分', index=False)
-
-    print(f"✓ Excel文件已保存: {excel_path}")
-
-    # 8. 输出统计摘要
-    print(f"\n{'='*60}")
-    print("分析完成！统计摘要：")
-    print(f"{'='*60}")
-    print(f"\n【中文Top5高频词】")
-    for _, row in chinese_freq_df.head(5).iterrows():
-        print(f"  {row['排名']}. {row['词汇']:<10} "
-              f"词性: {row['词性']:<6} "
-              f"绝对频次: {row['绝对频次']:>4}  "
-              f"标准化频次: {row['标准化频次']:>6.2f}")
-
-    print(f"\n【俄文Top5高频词】")
-    for _, row in russian_freq_df.head(5).iterrows():
-        print(f"  {row['排名']}. {row['词汇']:<15} "
-              f"词性: {row['词性']:<6} "
-              f"绝对频次: {row['绝对频次']:>4}  "
-              f"标准化频次: {row['标准化频次']:>6.2f}")
-
-    print(f"\n{'='*60}")
-    print("所有文件已保存到 output/ 目录")
+    print(f"\n  根输出目录：{OUTPUT_DIR}")
     print(f"{'='*60}\n")
 
 
