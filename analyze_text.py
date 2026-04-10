@@ -67,6 +67,8 @@ CHN_STOPWORDS = {
     # 领域泛义词（新闻报道类低价值词）
     '发生', '问题', '进行', '要求', '方面', '行动', '认为', '局势', '继续', '准备',
     '情况', '表示', '指出', '提出', '作出', '采取', '开始', '结束', '出现', '成为',
+    # 指定继续扩充的无意义词
+    '记者', '报道', '消息', '关于',
 }
 
 # 俄语停用词（需要下载nltk数据）
@@ -81,6 +83,10 @@ RUS_STOPWORDS = set(stopwords.words('russian'))
 RUS_STOPWORDS.update({
     'это', 'быть', 'весь', 'свой', 'мочь', 'который', 'такой', 'наш', 'ваш',
     'их', 'его', 'её', 'этот', 'тот', 'один', 'два', 'три', 'год', 'день',
+    # ??????????????
+    'корреспондент',
+    'сообщение', 'сообщения',
+    'сообщать', 'сообщить', 'сообщил', 'сообщила', 'сообщили', 'сообщается', 'сообщают',
 })
 
 # 保留的俄语词性（只保留实词）
@@ -94,7 +100,7 @@ FONT_PATH = 'simhei.ttf'  # 黑体，Windows系统自带
 # Linux: /usr/share/fonts/truetype/wqy/wqy-microhei.ttc
 
 # 输出目录
-OUTPUT_DIR = 'outputs\\xian_analysis'
+OUTPUT_DIR = 'outputs_1\\baituan_analysis'
 
 # ============================================================================
 # 工具函数
@@ -530,7 +536,7 @@ def main():
     ensure_output_dir()
 
     # 1. 读取文档
-    docx_path = 'Data/西安事变资料.docx'
+    docx_path = 'Data/百团大战资料.docx'
     chinese_texts, russian_texts, events = read_docx(docx_path)
 
     # 2. 处理中文文本
@@ -574,9 +580,11 @@ def main():
     generate_wordcloud(chinese_words, '中文高频词词云图', 'wordcloud_chinese.png')
     generate_wordcloud(russian_words, '俄文高频词词云图', 'wordcloud_russian.png', font_path=RUS_FONT)
 
-    # 6. 生成柱状图
-    generate_bar_chart(chinese_freq_df, '中文Top20高频词分布', 'barchart_chinese.png', use_times_for_xticks=False)
-    generate_bar_chart(russian_freq_df, '俄文Top20高频词分布', 'barchart_russian.png', use_times_for_xticks=True)
+    # 6. 生成柱状图（按“标准化频次”降序排序，确保视觉上平滑递减）
+    chinese_bar_df = chinese_freq_df.sort_values('标准化频次', ascending=False).reset_index(drop=True)
+    russian_bar_df = russian_freq_df.sort_values('标准化频次', ascending=False).reset_index(drop=True)
+    generate_bar_chart(chinese_bar_df, '中文Top20高频词分布', 'barchart_chinese.png', use_times_for_xticks=False)
+    generate_bar_chart(russian_bar_df, '俄文Top20高频词分布', 'barchart_russian.png', use_times_for_xticks=True)
 
     # 7. 导出Excel
     print(f"\n{'='*60}")
