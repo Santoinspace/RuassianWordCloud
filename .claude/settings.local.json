@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls e:/AProjection/RuassianWordCloud/*.py)",
+      "Bash(dir \"e:\\\\AProjection\\\\RuassianWordCloud\" /b)"
+    ]
+  }
+}

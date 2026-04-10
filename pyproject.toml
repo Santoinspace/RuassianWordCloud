@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "deep-translator>=1.11.4",
     "jieba>=0.42.1",
     "matplotlib>=3.7.0",
     "nltk>=3.8.1",

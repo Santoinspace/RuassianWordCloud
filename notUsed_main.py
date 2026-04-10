@@ -238,7 +238,7 @@ def generate_wordcloud(word_freq, output_path, title, font_path=None):
     plt.figure(figsize=(15, 10))
     plt.imshow(wc, interpolation='bilinear')
     plt.axis('off')
-    plt.title(title, fontproperties=fm.FontProperties(fname=font_path, size=20))
+    # plt.title(title, fontproperties=fm.FontProperties(fname=font_path, size=20)) # 不要标题
     plt.tight_layout(pad=0)
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
