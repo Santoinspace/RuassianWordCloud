@@ -180,7 +180,7 @@ FONT_PATH = 'simhei.ttf'  # 黑体，Windows系统自带
 # Linux: /usr/share/fonts/truetype/wqy/wqy-microhei.ttc
 
 # 输出目录
-OUTPUT_DIR = 'outputs_3'
+OUTPUT_DIR = 'outputs_4'
 
 # ============================================================================
 # 工具函数
@@ -483,7 +483,7 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
     生成词云图
 
     参数:
-        words: [(词汇, 词性), ...] 列表
+        words: [(词汇, 词性), ...] 列表，或 {词汇: 频次} 字典（用于镜像词云）
         title: 图表标题
         output_file: 输出文件名
         output_dir: 输出目录，默认使用全局 OUTPUT_DIR
@@ -491,9 +491,11 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
     """
     print(f"\n生成词云图: {title}")
 
-    # 词频统计（只统计词汇）
-    word_list = [w[0] for w in words]
-    word_freq = Counter(word_list)
+    # 支持直接传入词频字典（镜像词云）或元组列表
+    if isinstance(words, dict):
+        word_freq = words
+    else:
+        word_freq = Counter(w[0] for w in words)
 
     # 生成词云
     wordcloud = WordCloud(
@@ -522,7 +524,7 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
     print(f"✓ 词云图已保存: {output_path}")
 
 
-def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_dir: str = None, use_times_for_xticks: bool = False):
+def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_dir: str = None, use_times_for_xticks: bool = False, zh_labels: List[str] = None):
     """
     生成高频词柱状图
 
@@ -532,6 +534,7 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_di
         output_file: 输出文件名
         output_dir: 输出目录，默认使用全局 OUTPUT_DIR
         use_times_for_xticks: 是否对X轴刻度使用Times New Roman字体（用于俄文）
+        zh_labels: 中文翻译列表，若提供则X轴显示"俄文\n中文"双语格式
     """
     print(f"\n生成柱状图: {title}")
 
@@ -554,17 +557,17 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_di
     # 设置x轴标签
     ax.set_xticks(range(len(df)))
 
-    if use_times_for_xticks:
-        # 俄文：X轴刻度使用 Times New Roman
-        ax.set_xticklabels(
-            df['词汇'],
-            rotation=45,
-            ha='right',
-            fontsize=11,
-            fontfamily='Times New Roman'
-        )
+    if zh_labels:
+        # 双语模式：俄文\n中文，使用兼容双语的 SimHei 字体
+        bilingual = [f"{ru}\n{zh}" for ru, zh in zip(df['词汇'], zh_labels)]
+        ax.set_xticklabels(bilingual, rotation=45, ha='right', fontsize=10,
+                           fontfamily='SimHei')
+    elif use_times_for_xticks:
+        # 纯俄文：Times New Roman
+        ax.set_xticklabels(df['词汇'], rotation=45, ha='right', fontsize=11,
+                           fontfamily='Times New Roman')
     else:
-        # 中文：使用默认中文字体
+        # 纯中文：SimHei
         ax.set_xticklabels(df['词汇'], rotation=45, ha='right', fontsize=11)
 
     # 设置标题和标签（中文，使用SimHei）
@@ -704,54 +707,19 @@ def main():
 
             # ── 第三点：词云、柱状图、Excel 均写入该文档的独立子目录 ────────
 
-            # 5. 生成词云（→ output_dir/wordcloud_chinese.png 等）
+            # 5. 生成词云（俄文词云 + 中文镜像词云）
             print(f"\n{'='*60}")
             print("生成词云图...")
             print(f"{'='*60}")
 
             RUS_FONT = 'C:/Windows/Fonts/times.ttf'
 
-            generate_wordcloud(
-                chinese_words, '中文词汇词云图',
-                'wordcloud_chinese.png', output_dir=output_dir
-            )
-            generate_wordcloud(
-                russian_words, '俄文词汇词云图',
-                'wordcloud_russian.png', output_dir=output_dir,
-                font_path=RUS_FONT
-            )
-
-            # 6. 生成柱状图（→ output_dir/barchart_chinese.png 等）
-            chinese_bar_df = chinese_freq_df.sort_values(
-                '标准化频次', ascending=False
-            ).reset_index(drop=True)
-            russian_bar_df = russian_freq_df.sort_values(
-                '标准化频次', ascending=False
-            ).reset_index(drop=True)
-
-            generate_bar_chart(
-                chinese_bar_df, '中文 Top20 标准化频次',
-                'barchart_chinese.png', output_dir=output_dir,
-                use_times_for_xticks=False
-            )
-            generate_bar_chart(
-                russian_bar_df, '俄文 Top20 标准化频次',
-                'barchart_russian.png', output_dir=output_dir,
-                use_times_for_xticks=True
-            )
-
-            # 7. 导出 Excel（→ output_dir/result.xlsx）
-            print(f"\n{'='*60}")
-            print("导出结果表格...")
-            print(f"{'='*60}")
-
+            # 翻译俄文高频词（用于镜像词云和双语柱状图）
             print("\n翻译俄文词汇...")
             translator = GoogleTranslator(source='ru', target='zh-CN')
 
             def translate_words_robust(words):
-                """优先使用本地词典，不足时调用 API"""
-                results         = []
-                api_translations = []
+                results, api_translations = [], []
                 for w in words:
                     if w in RU_TO_ZH_TRANS:
                         results.append(RU_TO_ZH_TRANS[w])
@@ -762,21 +730,52 @@ def main():
                             api_translations.append((w, trans))
                         except Exception as e:
                             print(f"  翻译失败：{w} - {e}")
-                            results.append('')
-
+                            results.append(w)  # 翻译失败时保留原词
                 if api_translations:
                     print("\n" + "=" * 60)
                     print("以下词汇通过 API 翻译，建议补充到 RU_TO_ZH_TRANS 字典：")
-                    print("=" * 60)
                     for ru, zh in api_translations:
                         print(f"    '{ru}': '{zh}',")
                     print("=" * 60 + "\n")
-
                 return results
 
             russian_freq_df['中文翻译'] = translate_words_robust(
                 russian_freq_df['词汇'].tolist()
             )
+
+            # 俄文词云（原始俄文词汇 + 频次）
+            rus_freq_dict = dict(zip(russian_freq_df['词汇'], russian_freq_df['绝对频次']))
+            generate_wordcloud(
+                rus_freq_dict, '俄文词汇词云图',
+                'wordcloud_russian.png', output_dir=output_dir,
+                font_path=RUS_FONT
+            )
+
+            # 中文镜像词云（中文翻译 + 完全相同的频次）
+            zh_mirror_dict = dict(zip(russian_freq_df['中文翻译'], russian_freq_df['绝对频次']))
+            generate_wordcloud(
+                zh_mirror_dict, '中文镜像词云图',
+                'wordcloud_chinese.png', output_dir=output_dir
+            )
+
+            # 6. 只生成一张双语柱状图（俄文+中文翻译 X 轴）
+            russian_bar_df = russian_freq_df.sort_values(
+                '标准化频次', ascending=False
+            ).reset_index(drop=True)
+            zh_bar_labels = russian_bar_df['中文翻译'].tolist()
+
+            generate_bar_chart(
+                russian_bar_df, '俄文 Top20 高频词（标准化频次）',
+                'barchart_russian.png', output_dir=output_dir,
+                use_times_for_xticks=False, zh_labels=zh_bar_labels
+            )
+
+            # 7. 导出 Excel（→ output_dir/result.xlsx）
+            print(f"\n{'='*60}")
+            print("导出结果表格...")
+            print(f"{'='*60}")
+
+            # 中文翻译已在步骤5中计算完毕，直接使用
             chinese_freq_df['中文翻译'] = chinese_freq_df['词汇']
 
             def build_export_df(df, lang):
