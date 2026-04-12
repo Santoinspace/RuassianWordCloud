@@ -128,6 +128,8 @@ def load_chinese_stopwords():
         '同时', '正在', '如果', '立即', '任何', '以及', '不断', '之间', '展开',
         # 代词和量词
         '多个', '他们', '我们', '这些', '那些', '一切', '一项', '一名',
+        # 新增：无意义时间词、机构名、泛指词
+        '月初', '塔斯社', '代表', '组织', '据点',
     }
 
     stopwords_set.update(domain_stopwords)
@@ -257,7 +259,7 @@ FONT_PATH = 'simhei.ttf'  # 黑体，Windows系统自带
 # Linux: /usr/share/fonts/truetype/wqy/wqy-microhei.ttc
 
 # 输出目录
-OUTPUT_DIR = 'outputs_7'
+OUTPUT_DIR = 'outputs_8'
 
 # ============================================================================
 # 工具函数
@@ -607,7 +609,7 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
 
 def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_dir: str = None, ru_labels: List[str] = None):
     """
-    生成高频词柱状图。X轴：中文（SimHei）在上，俄文（Times New Roman）在下，顶端对齐。
+    生成高频词柱状图。X轴：第一行俄文（Times New Roman），第二行中文（SimHei），顶端对齐。
     """
     from matplotlib import font_manager as fm
     print(f"\n生成柱状图: {title}")
@@ -626,34 +628,30 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_di
         linewidth=0.5
     )
 
-    # 隐藏默认刻度标签
     ax.set_xticks(range(len(df)))
     ax.set_xticklabels(['' for _ in range(len(df))])
-    # 隐藏底部刻度线，避免与手动文字重叠
     ax.tick_params(axis='x', length=0)
 
-    y_max = ax.get_ylim()[1]
     y_min = ax.get_ylim()[0]
-    span = y_max - y_min
+    span  = ax.get_ylim()[1] - y_min
 
-    # 中文标签：紧贴X轴下方，顶端对齐
-    zh_y = y_min - span * 0.02
-    # 俄文标签：中文下方固定偏移，顶端对齐
-    ru_y = y_min - span * 0.10
+    # 第一行：俄文，紧贴X轴下方
+    ru_y = y_min - span * 0.03
+    # 第二行：中文，俄文下方紧凑间距
+    zh_y = y_min - span * 0.11
 
+    times_prop  = fm.FontProperties(family='Times New Roman', size=11)
     simhei_prop = fm.FontProperties(family='SimHei', size=11)
-    times_prop  = fm.FontProperties(family='Times New Roman', size=10)
 
     for i, zh in enumerate(df['词汇']):
-        ax.text(i, zh_y, zh, ha='center', va='top',
-                fontproperties=simhei_prop, rotation=45)
         if ru_labels:
             ax.text(i, ru_y, ru_labels[i], ha='center', va='top',
                     fontproperties=times_prop, rotation=45)
+        ax.text(i, zh_y, zh, ha='center', va='top',
+                fontproperties=simhei_prop, rotation=45)
 
     ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
-    # labelpad 足够大，确保"词汇"标签在俄文下方不重叠
-    ax.set_xlabel('词汇', fontsize=13, fontweight='bold', labelpad=80)
+    ax.set_xlabel('词汇', fontsize=13, fontweight='bold', labelpad=90)
     ax.set_ylabel('标准化频次（每万词）', fontsize=13, fontweight='bold')
 
     ax.grid(axis='y', alpha=0.3, linestyle='--')
@@ -672,11 +670,6 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_di
     plt.close()
 
     print(f"✓ 柱状图已保存: {output_path}")
-
-
-# ============================================================================
-# 主流程
-# ============================================================================
 
 # ============================================================================
 # 工具函数（修改部分）
