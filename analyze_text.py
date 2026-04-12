@@ -52,6 +52,9 @@ RU_TO_ZH_TRANS = {
     'война': '战争',
     'армия': '军队',
     'войска': '部队',
+    'красная': '红军',
+    'чан кай-ши': '蒋介石',
+    'чжан сюэ-лян': '张学良',
     # 在此添加更多翻译映射，避免每次都调用API
 }
 
@@ -153,8 +156,37 @@ def load_russian_stopwords():
     stopwords_set.update(news_stopwords)
     stopwords_set.update(pronoun_verb_stopwords)
 
+    # 读取外部俄文停用词文件
+    ru_stopwords_file = 'resources/stopwords_ru.txt'
+    if os.path.exists(ru_stopwords_file):
+        with open(ru_stopwords_file, 'r', encoding='utf-8') as f:
+            file_words = {line.strip() for line in f if line.strip()}
+        stopwords_set.update(file_words)
+        print(f"✓ 已加载 {len(file_words)} 个外部俄文停用词（来自 {ru_stopwords_file}）")
+    else:
+        print(f"⚠ 未找到俄文停用词文件：{ru_stopwords_file}")
+
+    # 手工补充：地理泛指、编制泛指、形容词泛指
+    manual_stopwords = {
+        'провинция',  # 省份
+        'часть',      # 部分
+        'район',      # 区
+        'новый',      # 新的
+        'бригада',    # 旅
+        'область',    # 州/地区
+        'город',      # 城市
+        'территория', # 领土
+        'подразделение',  # 分队
+        'отряд',      # 分队/支队
+        'корпус',     # 军团
+        'дивизия',    # 师
+        'полк',       # 团
+    }
+    stopwords_set.update(manual_stopwords)
+
     print(f"✓ 追加 {len(news_stopwords)} 个新闻报道类停用词")
     print(f"✓ 追加 {len(pronoun_verb_stopwords)} 个代词/系动词停用词")
+    print(f"✓ 追加 {len(manual_stopwords)} 个手工过滤词")
     print(f"✓ 俄语停用词总数：{len(stopwords_set)}")
 
     return stopwords_set
@@ -180,7 +212,7 @@ FONT_PATH = 'simhei.ttf'  # 黑体，Windows系统自带
 # Linux: /usr/share/fonts/truetype/wqy/wqy-microhei.ttc
 
 # 输出目录
-OUTPUT_DIR = 'outputs_4'
+OUTPUT_DIR = 'outputs_5'
 
 # ============================================================================
 # 工具函数
@@ -351,8 +383,8 @@ def process_russian_text(texts: List[str]) -> List[Tuple[str, str]]:
     all_words = []
 
     for text in texts:
-        # 分词（按空格和标点）
-        words = re.findall(r'[а-яА-ЯёЁ]+', text.lower())
+        # 分词（允许连字符，防止带连字符的中国人名被切碎）
+        words = re.findall(r'[а-яА-ЯёЁ][а-яА-ЯёЁ-]*[а-яА-ЯёЁ]|[а-яА-ЯёЁ]+', text.lower())
 
         for word in words:
             # 过滤长度
@@ -526,24 +558,15 @@ def generate_wordcloud(words: List[Tuple[str, str]], title: str, output_file: st
 
 def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_dir: str = None, use_times_for_xticks: bool = False, zh_labels: List[str] = None):
     """
-    生成高频词柱状图
-
-    参数:
-        df: 包含词汇和标准化频次的DataFrame
-        title: 图表标题
-        output_file: 输出文件名
-        output_dir: 输出目录，默认使用全局 OUTPUT_DIR
-        use_times_for_xticks: 是否对X轴刻度使用Times New Roman字体（用于俄文）
-        zh_labels: 中文翻译列表，若提供则X轴显示"俄文\n中文"双语格式
+    生成高频词柱状图，支持双字体混排X轴（俄文Times New Roman + 中文SimHei）
     """
+    from matplotlib import font_manager as fm
     print(f"\n生成柱状图: {title}")
 
-    # 设置中文字体（用于标题和坐标轴标签）
     plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.rcParams['axes.unicode_minus'] = False
 
-    # 绘图
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, ax = plt.subplots(figsize=(14, 9))
 
     bars = ax.bar(
         range(len(df)),
@@ -554,46 +577,53 @@ def generate_bar_chart(df: pd.DataFrame, title: str, output_file: str, output_di
         linewidth=0.5
     )
 
-    # 设置x轴标签
+    # 隐藏默认 xticklabels，改用手动 text 绘制双字体标签
     ax.set_xticks(range(len(df)))
+    ax.set_xticklabels(['' for _ in range(len(df))])
 
     if zh_labels:
-        # 双语模式：俄文\n中文，使用兼容双语的 SimHei 字体
-        bilingual = [f"{ru}\n{zh}" for ru, zh in zip(df['词汇'], zh_labels)]
-        ax.set_xticklabels(bilingual, rotation=45, ha='right', fontsize=10,
-                           fontfamily='SimHei')
+        # 双字体混排：俄文用 Times New Roman，中文用 SimHei
+        times_prop = fm.FontProperties(family='Times New Roman', size=11)
+        simhei_prop = fm.FontProperties(family='SimHei', size=10)
+
+        y_min = ax.get_ylim()[0]
+        # 俄文标签位置（紧贴X轴下方）
+        ru_y = y_min - (ax.get_ylim()[1] - y_min) * 0.06
+        # 中文标签位置（俄文再下方）
+        zh_y = y_min - (ax.get_ylim()[1] - y_min) * 0.13
+
+        for i, (ru, zh) in enumerate(zip(df['词汇'], zh_labels)):
+            ax.text(i, ru_y, ru, ha='center', va='top',
+                    fontproperties=times_prop, rotation=45)
+            ax.text(i, zh_y, zh, ha='center', va='top',
+                    fontproperties=simhei_prop, rotation=45)
+
+        # 为双行标签留出底部空间
+        fig.subplots_adjust(bottom=0.28)
     elif use_times_for_xticks:
-        # 纯俄文：Times New Roman
         ax.set_xticklabels(df['词汇'], rotation=45, ha='right', fontsize=11,
                            fontfamily='Times New Roman')
     else:
-        # 纯中文：SimHei
         ax.set_xticklabels(df['词汇'], rotation=45, ha='right', fontsize=11)
 
-    # 设置标题和标签（中文，使用SimHei）
     ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
     ax.set_xlabel('词汇', fontsize=13, fontweight='bold')
     ax.set_ylabel('标准化频次（每万词）', fontsize=13, fontweight='bold')
 
-    # 添加网格
     ax.grid(axis='y', alpha=0.3, linestyle='--')
     ax.set_axisbelow(True)
 
-    # 在柱子上方显示数值
-    for i, bar in enumerate(bars):
+    for bar in bars:
         height = bar.get_height()
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            height,
-            f'{height:.1f}',
-            ha='center',
-            va='bottom',
-            fontsize=9
+            height, f'{height:.1f}',
+            ha='center', va='bottom', fontsize=9
         )
 
-    plt.tight_layout()
+    if not zh_labels:
+        plt.tight_layout()
 
-    # 保存
     save_dir = output_dir if output_dir else OUTPUT_DIR
     output_path = os.path.join(save_dir, output_file)
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
@@ -679,11 +709,13 @@ def main():
 
             # 2. 中文词频统计
             chinese_words    = process_chinese_text(chinese_texts)
-            chinese_freq_df  = calculate_frequencies(chinese_words, top_n=20)
+            chinese_freq_df  = calculate_frequencies(chinese_words, top_n=15)
+            chinese_wc_df    = calculate_frequencies(chinese_words, top_n=100)
 
             # 3. 俄文词频统计
             russian_words    = process_russian_text(russian_texts)
-            russian_freq_df  = calculate_frequencies(russian_words, top_n=20)
+            russian_freq_df  = calculate_frequencies(russian_words, top_n=15)
+            russian_wc_df    = calculate_frequencies(russian_words, top_n=100)
 
             # 4. 标准化频次
             print(f"\n{'='*60}")
@@ -743,16 +775,21 @@ def main():
                 russian_freq_df['词汇'].tolist()
             )
 
-            # 俄文词云（原始俄文词汇 + 频次）
-            rus_freq_dict = dict(zip(russian_freq_df['词汇'], russian_freq_df['绝对频次']))
+            # 词云使用 top100 数据，翻译 wc_df 词汇
+            russian_wc_df['中文翻译'] = translate_words_robust(
+                russian_wc_df['词汇'].tolist()
+            )
+
+            # 俄文词云（top100 俄文词汇 + 频次）
+            rus_freq_dict = dict(zip(russian_wc_df['词汇'], russian_wc_df['绝对频次']))
             generate_wordcloud(
                 rus_freq_dict, '俄文词汇词云图',
                 'wordcloud_russian.png', output_dir=output_dir,
                 font_path=RUS_FONT
             )
 
-            # 中文镜像词云（中文翻译 + 完全相同的频次）
-            zh_mirror_dict = dict(zip(russian_freq_df['中文翻译'], russian_freq_df['绝对频次']))
+            # 中文镜像词云（top100 中文翻译 + 相同频次）
+            zh_mirror_dict = dict(zip(russian_wc_df['中文翻译'], russian_wc_df['绝对频次']))
             generate_wordcloud(
                 zh_mirror_dict, '中文镜像词云图',
                 'wordcloud_chinese.png', output_dir=output_dir
